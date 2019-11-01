@@ -1,18 +1,32 @@
 json-summarizer
 ===============
 
-Summarizes JSON file contents (or native Python data structures)
+> Summarizes JSON file contents (or native Python data structures)
 
-Pretty easy to run in Python 2.X (tested on Python 2.7):
+Ported to run on Python>=3.5 (no longer runs on 2.X):
 
-    python summarize_json.py <JSON file>
+```sh
+python summarize_json.py <file.json>
+```
 
-This script prints out a summary of your JSON file's contents, essentially inferring a schema using some simple heuristics.
+Meant to be used like the following:
 
-It comes in handy for understanding the structure of a blob of JSON (or native Python) data that someone else hands to you
+```sh
+python summarize_json.py <file.json> > summary.md
+# Enjoy Markdown's syntax & color highlighting
+```
+
+Get simple summary without examples:
+
+```sh
+python summarize_json.py <file.json> | grep -v '#' > simple.md
+# -v means --invert-match, i.e. see all non-comment lines only
+```
+
+#### Original author: [Philip Guo](https://github.com/pgbovine), Edit by: [Jethro Lee](https://github.com/dlemfh)
+
+> This script prints out a summary of your JSON file's contents, essentially inferring a schema using some simple heuristics.
+
+> It comes in handy for understanding the structure of a blob of JSON (or native Python) data that someone else hands to you
 without proper documentation. And it can also be used to manually sanity-check files for
 outliers, weird values, inconsistencies, etc.
-
-Project instigated by [this Twitter conversation](https://twitter.com/edwardbenson/status/357932092841144321) on 2013-07-18.
-
-Email philip@pgbovine.net with bug reports, feature requests, etc.
