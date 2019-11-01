@@ -1,102 +1,128 @@
-# Summarizes the contents of a JSON file
+"""Summarizes the contents of a JSON file"""
 # Created by Philip Guo on 2013-07-18
+# Edited by Jethro Lee on 2019-11-01
+from __future__ import print_function
 
-import json
 import sys
+import json
 import operator
-from collections import defaultdict
+from statistics import mean
+from functools import reduce
+from collections import defaultdict, OrderedDict
 
-def spaces(level):
-    return '  ' * level
+# Print N most common occurrences
+N_MOST_COMMON = 3
+# Print up to M chars for strings
+M_CHARS = 50
+# Indent format
+INDENT = '    '
+# Comment format
+COMMENT = '  # '
 
 
-# returns a dict with keys num_dicts, num_lists, num_strings, num_bools,
-# num_numbers, num_nulls
+# Return summary-stats of given list of numbers
+def stats(lst):
+    lst = list(lst)
+    st = set(lst)
+    # if singleton
+    if len(st) == 1:
+        return lst[0]
+    return '[min: {}, mean: {}, max: {}, uniq: {}, cnt: {}]'.format(
+        min(lst), mean(lst), max(lst), len(st), len(lst))
+
+
+# Return dict with keys as Python-types, values as counts
 def analyze_types(lst):
     ret = defaultdict(int)
     for e in lst:
-        if type(e) is dict:
+        if isinstance(e, dict):
             ret['dict'] += 1
-        elif type(e) is list:
+        elif isinstance(e, list):
             ret['list'] += 1
-        elif type(e) in (str, unicode):
-            ret['string'] += 1
-        elif type(e) in (int, long, float):
-            ret['number'] += 1
-        elif type(e) is bool:
+        elif isinstance(e, bool):
             ret['bool'] += 1
+        elif isinstance(e, str):
+            ret['str'] += 1
+        elif isinstance(e, int):
+            ret['int'] += 1
+        elif isinstance(e, float):
+            ret['float'] += 1
         else:
             assert e is None
-            ret['null'] += 1
+            ret['None'] += 1
     return ret
 
-# returns 'dict', 'list', 'string', 'number', 'bool', 'null'
+
+# Return 'dict', 'list', 'bool', 'str', 'int', 'float', or 'None'
 # if type_dict is COMPLETELY HOMOGENEOUS, otherwise return None
 def get_homogeneous_type(type_dict):
-    names_and_counts = type_dict.items()
-    non_zero = [e for e in names_and_counts if e[1] > 0]
-    if len(non_zero) != 1:
-        return None
+    non_zero = [t for t, c in type_dict.items() if c > 0]
+    if len(non_zero) == 1:
+        return non_zero[0]
     else:
-        return non_zero[0][0]
+        return None
 
-def pp_type_dict(type_dict):
-    names_and_counts = ['%d %ss' % (e[1], e[0]) for e in type_dict.items()]
-    return ', '.join(names_and_counts)
-    
 
 def summarize_dict(d, indent):
-    for k, v, in d.iteritems():
-        print spaces(indent) + '> ' + repr(str(k)), ':'
+    for k, v in d.items():
+        # print key
+        print(indent + repr(k) + ':', end=' ')
 
-        if type(v) is dict:
-            print spaces(indent+1) + 'dict {'
-            summarize_dict(v, indent+1)
-            print spaces(indent+1) + '}'
-        elif type(v) is list:
-            print spaces(indent+1) + 'list ['
-            summarize_list(v, indent+1)
-            print spaces(indent+1) + ']'
+        # print value
+        if isinstance(v, dict):
+            print('{')
+            summarize_dict(v, indent + INDENT)
+            print(indent + '},')
+        elif isinstance(v, list) and v:
+            print('[')
+            print(indent + COMMENT + 'LEN: {}'.format(len(v)))
+            summarize_list(v, indent + INDENT, newline=True)
+            print(indent + '],')
         else:
-            print spaces(indent+1) + repr(str(v))
+            print(repr(v) + ',')
 
 
-def summarize_list(lst, indent, is_toplevel=False):
+def summarize_list(lst, indent, newline=False):
     type_dict = analyze_types(lst)
-
     ht = get_homogeneous_type(type_dict)
-    prefix = spaces(indent+1)
-    if len(lst) == 0:
-        print prefix + 'empty'
+    prefix = indent if newline else ''
+
+    # Empty list
+    if not lst:
+        pass
+
+    # Homogeneous list
     elif ht:
         if ht == 'dict':
-            print prefix + 'dict {'
-            summarize_list_of_dicts(lst, indent+1)
-            print prefix + '}'
+            print(prefix + '{')
+            summarize_list_of_dicts(lst, indent + INDENT)
+            print(indent + '},')
         elif ht == 'list':
-            print prefix + 'list ['
-            summarize_list_of_lists(lst, indent+1)
-            print prefix + ']'
-        elif ht == 'number':
-            print prefix + ht,
-            summarize_list_of_numbers(lst)
-        elif ht == 'string':
-            print prefix + ht
-            summarize_list_of_strings(lst, indent+1)
+            print(prefix + '[')
+            print(indent + COMMENT + 'LEN: {}'.format(stats(map(len, lst))))
+            summarize_list_of_lists(lst, indent + INDENT)
+            print(indent + '],')
+        elif ht == 'int':
+            print(prefix + ht + ',')
+            summarize_list_of_numbers(lst, indent)
+        elif ht == 'float':
+            print(prefix + ht + ',')
+            summarize_list_of_numbers(lst, indent)
+        elif ht == 'str':
+            print(prefix + ht + ',')
+            summarize_list_of_strings(lst, indent)
         elif ht == 'bool':
-            print prefix + ht
-            summarize_list_of_bools(lst, indent+1)
+            print(prefix + ht + ',')
+            summarize_list_of_bools(lst, indent)
         else:
-            assert ht == 'null'
-            print prefix + ht
-            #summarize_list_of_nulls(lst, indent+1)
-    else:
-        # test on
-        # python summarize_json.py opt-aliasing-golden.trace.json 
-        print prefix + 'heterogeneous list:', pp_type_dict(type_dict)
+            assert ht == 'None'
+            print(prefix + ht + ',')
+            # summarize_list_of_nulls(lst, indent)
 
-    if is_toplevel:
-        print prefix + 'list.length:', len(lst)
+    # Heterogeneous list
+    else:
+        print(prefix + 'heterogeneous: ' + ', '.join(
+            '{} {}(s)'.format(c, t) for t, c in type_dict.items()))
 
 
 def summarize_list_of_dicts(lst, indent):
@@ -104,41 +130,41 @@ def summarize_list_of_dicts(lst, indent):
     total = len(lst)
 
     for e in lst:
-        assert type(e) is dict
+        assert isinstance(e, dict)
         for k in e.keys():
             field_counts[k] += 1
 
-    for f, c in field_counts.iteritems():
-        print spaces(indent+1) + '> ' + repr(str(f)),
+    for f, c in field_counts.items():
+        print(indent + repr(f), end='')
         if c < total:
             sublist = [e[f] for e in lst if f in e]
-            print '(%d of %d records) :' % (c, total)
+            print(' ({} of {} records):'.format(c, total), end=' ')
         else:
             sublist = [e[f] for e in lst]
-            print ':'
+            print(':', end=' ')
 
-        summarize_list(sublist, indent+1)
+        summarize_list(sublist, indent)
 
 
-def summarize_list_of_numbers(lst):
-    lst_min = min(lst)
-    lst_max = max(lst)
-    lst_mean = float(sum(lst)) / len(lst)
+def summarize_list_of_numbers(lst, indent):
+    # summary-stats
+    s = stats(lst)
 
     # singleton
-    if len(set(lst)) == 1:
-        print str(lst[0])
+    if isinstance(s, (int, float)):
+        print(indent + COMMENT + str(s))
         return
 
-    print '[min: %.4g, mean: %.4g, max: %.4g]' % (lst_min, lst_mean, lst_max),
+    # multiple
+    print(indent + COMMENT + s, end='')
 
-    # test sortedness or reverse sortedness
-    if sorted(lst) == lst:
-        print 'sorted'
-    elif reversed(lst) == lst:
-        print 'reverse sorted'
+    # test sorted or reverse-sorted
+    if all(i <= j for i, j in zip(lst, lst[1:])):
+        print(' *sorted*')
+    elif all(i >= j for i, j in zip(lst[1:], lst)):
+        print(' *reverse-sorted*')
     else:
-        print
+        print()
 
 
 def summarize_list_of_strings(lst, indent):
@@ -146,47 +172,37 @@ def summarize_list_of_strings(lst, indent):
     for e in lst:
         hist[e] += 1
 
-    # if only singletons, don't do anything
-    if len(set(hist.values())) == 1 and hist.values()[0] == 1:
+    # if only singletons, print first example (up to M chars)
+    if len(set(hist.values())) == 1 and list(hist.values())[0] == 1:
+        ex = lst[0][:M_CHARS] + ('...' if lst[0][M_CHARS:] else '')
+        print(indent + COMMENT + repr(ex) + ', ...')
         return
 
-    # print N most common as 'enums' if they're NOT singletons
-    i = 0
-    N = 5
-    display_leftovers = False
-    printed_set = set()
-    for k,v in sorted(hist.items(), key=lambda e:e[1], reverse=True):
-        # by the time we reach a singleton, just break (since we're
-        # reverse sorted, so everything else is a singleton by now)
-        if v == 1:
-            break
+    # print N most common occurrences
+    n_cmn = ('{} x {}'.format(repr(k), v) for (k, v), _ in zip(
+        sorted(hist.items(), key=lambda x: x[1], reverse=True),
+        range(N_MOST_COMMON)))
+    more = ', ...' if len(hist) > N_MOST_COMMON else ''
+    print(indent + COMMENT + ', '.join(n_cmn) + more)
 
-        print spaces(indent+1) + repr(str(k)), 'x', v
-        display_leftovers = True
-        printed_set.add(k)
-
-        i += 1
-        if i >= N:
-            break
-
-    num_others = len(set(hist.keys()) - printed_set)
-    if num_others > 0 and display_leftovers:
-        print spaces(indent+1) + '%d other elements' % num_others
+    # print number of unique elements
+    print(indent + COMMENT + '{} unique value(s)'.format(len(hist)))
 
 
 def summarize_list_of_bools(lst, indent):
-    num_true = num_false = 0
+    num_t = num_f = 0
     for e in lst:
         if e is True:
-            num_true += 1
+            num_t += 1
         else:
             assert e is False
-            num_false += 1
-    print spaces(indent+1) + '[True: %d, False: %d]' % (num_true, num_false)
+            num_f += 1
+    print(indent + COMMENT + 'True: {}, False: {}'.format(num_t, num_f))
 
 
 def summarize_list_of_lists(lst, indent):
-    list_lengths = [len(e) for e in lst]
+    if not lst:
+        return
 
     # analyze types of each constituent sublist
     hts = set()
@@ -197,32 +213,44 @@ def summarize_list_of_lists(lst, indent):
             hts.add(ht)
 
     if not hts:
-        print spaces(indent+1) + '[heterogeneous sub-lists]'
+        print(indent + '[heterogeneous sub-lists]')
     elif len(hts) == 1:
-        homogeneous_type = list(hts)[0]
+        # homogeneous_type = list(hts)[0]
         # flatten the list and recurse, tricky tricky!
         flattened_lst = reduce(operator.add, lst)
         if flattened_lst:
-            summarize_list(flattened_lst, indent) # don't increase the indent level!
+            summarize_list(flattened_lst, indent, newline=True)
         else:
-            print spaces(indent+1) + 'empty lists'
+            print(indent + 'empty lists')
     else:
-        print spaces(indent+1) + ', '.join(sorted(hts)) + ' (heterogeneous)'
-
-    print spaces(indent+1) + 'sublist.lengths:',
-    summarize_list_of_numbers(list_lengths)
+        print(indent + ', '.join(sorted(hts)) + ' (heterogeneous)')
 
 
 if __name__ == "__main__":
-    o = json.load(open(sys.argv[1]))
-    if type(o) is dict:
-        print 'dict {'
-        summarize_dict(o, 0)
-        print '}'
-    elif type(o) is list:
-        print 'list ['
-        summarize_list(o, 0, True)
-        print ']'
-    else:
-        print 'Primitive:', o
+    # Check args
+    if len(sys.argv) != 2:
+        print('\n  Usage: python summarize_json.py <file.json>')
+        sys.exit(0)
 
+    # Check version
+    if sys.version_info < (3, 5):
+        raise Exception('You need to run this with Python>=3.5')
+
+    # Open & load
+    with open(sys.argv[1], encoding='utf-8') as file:
+        o = json.load(file, object_pairs_hook=OrderedDict)
+
+    # Print
+    print('```py')
+    if isinstance(o, dict):
+        print('{')
+        summarize_dict(o, INDENT)
+        print('}')
+    elif isinstance(o, list) and o:
+        print('# TOTAL COUNT: {}'.format(len(o)))
+        print('[')
+        summarize_list(o, INDENT, newline=True)
+        print(']')
+    else:
+        print(repr(o))
+    print('```')
