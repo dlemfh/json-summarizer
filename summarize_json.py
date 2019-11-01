@@ -1,17 +1,17 @@
 """Summarizes the contents of a JSON file"""
-# Created by Philip Guo on 2013-07-18
-# Edited by Jethro Lee on 2019-11-01
+# Created by Philip Guo on 2013-07-18 (https://github.com/pgbovine/json-summarizer)
+# Edited by Jethro Lee on 2019-11-01 (https://github.com/dlemfh/json-summarizer)
 from __future__ import print_function
 
 import sys
 import json
-import operator
 from statistics import mean
 from functools import reduce
-from collections import defaultdict, OrderedDict
+from operator import add, itemgetter
+from collections import defaultdict, OrderedDict, Counter
 
 # Print N most common occurrences
-N_MOST_COMMON = 3
+N_MOST_COMMON = 2
 # Print up to M chars for strings
 M_CHARS = 50
 # Indent format
@@ -20,15 +20,19 @@ INDENT = '    '
 COMMENT = '  # '
 
 
-# Return summary-stats of given list of numbers
-def stats(lst):
+# Define how to summarize list of numbers
+def stats(lst, show_count=5, show_all=10):
     lst = list(lst)
-    st = set(lst)
-    # if singleton
-    if len(st) == 1:
+    cnt = Counter(lst).most_common()
+    if len(cnt) == 1:
         return lst[0]
-    return '[min: {}, mean: {}, max: {}, uniq: {}, cnt: {}]'.format(
-        min(lst), mean(lst), max(lst), len(st), len(lst))
+    elif len(cnt) <= show_count and cnt[0][1] > 1:
+        return ', '.join('{}{{{}}}'.format(*c) for c in cnt)
+    elif len(lst) <= show_all:
+        return ', '.join(map(str, sorted(lst)))
+    else:
+        return '[min: {}, max: {}, mode: {}, mean: {}, uniq: {}, cnt: {}]'.format(
+            min(lst), max(lst), cnt[0][0], mean(lst), len(cnt), len(lst))
 
 
 # Return dict with keys as Python-types, values as counts
@@ -98,8 +102,11 @@ def summarize_list(lst, indent, newline=False):
             summarize_list_of_dicts(lst, indent + INDENT)
             print(indent + '},')
         elif ht == 'list':
+            if newline:
+                print(indent + '# LEN: {}'.format(stats(map(len, lst))))
             print(prefix + '[')
-            print(indent + COMMENT + 'LEN: {}'.format(stats(map(len, lst))))
+            if not newline:
+                print(indent + COMMENT + 'LEN: {}'.format(stats(map(len, lst))))
             summarize_list_of_lists(lst, indent + INDENT)
             print(indent + '],')
         elif ht == 'int':
@@ -121,8 +128,8 @@ def summarize_list(lst, indent, newline=False):
 
     # Heterogeneous list
     else:
-        print(prefix + 'heterogeneous: ' + ', '.join(
-            '{} {}(s)'.format(c, t) for t, c in type_dict.items()))
+        print(prefix + '<heterogeneous-type: ' + ', '.join(
+            '{} {}(s)'.format(c, t) for t, c in type_dict.items()) + '>,')
 
 
 def summarize_list_of_dicts(lst, indent):
@@ -155,14 +162,14 @@ def summarize_list_of_numbers(lst, indent):
         print(indent + COMMENT + str(s))
         return
 
-    # multiple
+    # else
     print(indent + COMMENT + s, end='')
 
-    # test sorted or reverse-sorted
+    # check if sorted
     if all(i <= j for i, j in zip(lst, lst[1:])):
-        print(' *sorted*')
+        print(' *ascending*')
     elif all(i >= j for i, j in zip(lst[1:], lst)):
-        print(' *reverse-sorted*')
+        print(' *descending*')
     else:
         print()
 
@@ -174,19 +181,20 @@ def summarize_list_of_strings(lst, indent):
 
     # if only singletons, print first example (up to M chars)
     if len(set(hist.values())) == 1 and list(hist.values())[0] == 1:
-        ex = lst[0][:M_CHARS] + ('...' if lst[0][M_CHARS:] else '')
-        print(indent + COMMENT + repr(ex) + ', ...')
-        return
+        m = M_CHARS if ord(lst[0][0]) < 128 else M_CHARS // 2
+        example = lst[0][:m] + ('...' if lst[0][m:] else '')
+        print(indent + COMMENT + repr(example) + '{1}, ...', end='')
 
     # print N most common occurrences
-    n_cmn = ('{} x {}'.format(repr(k), v) for (k, v), _ in zip(
-        sorted(hist.items(), key=lambda x: x[1], reverse=True),
-        range(N_MOST_COMMON)))
-    more = ', ...' if len(hist) > N_MOST_COMMON else ''
-    print(indent + COMMENT + ', '.join(n_cmn) + more)
+    else:
+        n_cmn = ('{}{{{}}}'.format(repr(k), v) for (k, v), _ in zip(
+            sorted(hist.items(), key=itemgetter(1), reverse=True),
+            range(N_MOST_COMMON)))
+        more = ', ...' if len(hist) > N_MOST_COMMON else ' '
+        print(indent + COMMENT + ', '.join(n_cmn) + more, end='')
 
     # print number of unique elements
-    print(indent + COMMENT + '{} unique value(s)'.format(len(hist)))
+    print('[{} uniq val(s)]'.format(len(hist)))
 
 
 def summarize_list_of_bools(lst, indent):
@@ -217,7 +225,7 @@ def summarize_list_of_lists(lst, indent):
     elif len(hts) == 1:
         # homogeneous_type = list(hts)[0]
         # flatten the list and recurse, tricky tricky!
-        flattened_lst = reduce(operator.add, lst)
+        flattened_lst = reduce(add, lst)
         if flattened_lst:
             summarize_list(flattened_lst, indent, newline=True)
         else:
@@ -247,7 +255,7 @@ if __name__ == "__main__":
         summarize_dict(o, INDENT)
         print('}')
     elif isinstance(o, list) and o:
-        print('# TOTAL COUNT: {}'.format(len(o)))
+        print('# LEN: {}'.format(len(o)))
         print('[')
         summarize_list(o, INDENT, newline=True)
         print(']')
