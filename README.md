@@ -23,6 +23,17 @@ python summarize_json.py <file.json> | grep -v '#' > simple.md
 # -v means --invert-match, i.e. see all non-comment lines only
 ```
 
+Or use a script like following, to summarize all json files in directory:
+
+```sh
+for f in *.json; do                # For all json files:
+{
+   echo "$f"                       # print file name
+   python summarize_json.py "$f"   # print summary
+} >> summaries.md                  # into this output file
+done
+```
+
 #### Original author: [Philip Guo](https://github.com/pgbovine), Edit by: [Jethro Lee](https://github.com/dlemfh)
 
 > This script prints out a summary of your JSON file's contents, essentially inferring a schema using some simple heuristics.
