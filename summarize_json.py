@@ -180,10 +180,11 @@ def summarize_list_of_strings(lst, indent):
         hist[e] += 1
 
     # if only singletons, print first example (up to M chars)
-    if len(set(hist.values())) == 1 and list(hist.values())[0] == 1:
+    if len(hist) == len(lst):
         m = M_CHARS if ord(lst[0][0]) < 128 else M_CHARS // 2
         example = lst[0][:m] + ('...' if lst[0][m:] else '')
         print(indent + COMMENT + repr(example) + '{1}, ...', end='')
+        print('[{} singleton(s)]'.format(len(hist)))
 
     # print N most common occurrences
     else:
@@ -192,9 +193,7 @@ def summarize_list_of_strings(lst, indent):
             range(N_MOST_COMMON)))
         more = ', ...' if len(hist) > N_MOST_COMMON else ' '
         print(indent + COMMENT + ', '.join(n_cmn) + more, end='')
-
-    # print number of unique elements
-    print('[{} uniq val(s)]'.format(len(hist)))
+        print('[{} uniq val(s)]'.format(len(hist)))
 
 
 def summarize_list_of_bools(lst, indent):
