@@ -5,38 +5,38 @@ json-summarizer
 
 <br/>
 
-Ported to run on Python>=3.5 (no longer runs on 2.X):
+Ported to run on Python>=3.5 (No longer runs on 2.X):
 
 ```sh
-python summarize_json.py <file.json>
+python3 summarize_json.py <file.json>
 ```
 
 Meant to be used like the following:
 
 ```sh
-python summarize_json.py <file.json> > summary.md
+python3 summarize_json.py <file.json> > summary.md
 # Enjoy Markdown's syntax & color highlighting
 ```
 
 Get simple summary without examples:
 
 ```sh
-python summarize_json.py <file.json> | grep -v '#' > simple.md
+python3 summarize_json.py <file.json> | grep -v '#' > simple.md
 # -v means --invert-match, i.e. see all non-comment lines only
 ```
 
 Or use a script like following, to summarize all json files in directory:
 
 ```sh
-for f in *.json; do                # For all json files:
+for f in *.json; do                 # For all json files:
 {
-   echo "$f"                       # print file name
-   python summarize_json.py "$f"   # print summary
-} >> summaries.md                  # into this output file
+   echo "$f"                        # print file name
+   python3 summarize_json.py "$f"   # print summary
+} >> summaries.md                   # into this output file
 done
 ```
 
-## Examples
+## Sample input/output
 
 <details><summary>[INPUT] <i>colors.json</i></summary>
 <p>
