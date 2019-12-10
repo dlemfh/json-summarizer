@@ -3,15 +3,15 @@
 # Edited by Jethro Lee on 2019-11-01 (https://github.com/dlemfh/json-summarizer)
 from __future__ import print_function
 
-import sys
 import json
-from statistics import mean
-from functools import reduce
-from operator import add, itemgetter
+import sys
 from collections import defaultdict, OrderedDict, Counter
+from functools import reduce
+from math import floor
+from operator import add
+from statistics import mean
+from typing import List
 
-# Print N most common occurrences
-N_MOST_COMMON = 2
 # Print up to M chars for strings
 M_CHARS = 50
 # Indent format
@@ -21,8 +21,7 @@ COMMENT = '  # '
 
 
 # Define how to summarize list of numbers
-def stats(lst, show_count=5, show_all=10):
-    lst = list(lst)
+def stats(lst: List, int_type=False, round_to=2, show_count=5, show_all=10):
     cnt = Counter(lst).most_common()
     if len(cnt) == 1:
         return lst[0]
@@ -31,8 +30,13 @@ def stats(lst, show_count=5, show_all=10):
     elif len(lst) <= show_all:
         return ', '.join(map(str, sorted(lst)))
     else:
+        lst_mean = mean(lst)
+        if int_type and isinstance(lst_mean, float):
+            lst_mean = '{}.x'.format(floor(lst_mean))
+        else:
+            lst_mean = round(lst_mean, round_to)
         return '[min: {}, max: {}, mode: {}, mean: {}, uniq: {}, cnt: {}]'.format(
-            min(lst), max(lst), cnt[0][0], mean(lst), len(cnt), len(lst))
+            min(lst), max(lst), cnt[0][0], lst_mean, len(cnt), len(lst))
 
 
 # Return dict with keys as Python-types, values as counts
@@ -102,19 +106,20 @@ def summarize_list(lst, indent, newline=False):
             summarize_list_of_dicts(lst, indent + INDENT)
             print(indent + '},')
         elif ht == 'list':
+            lens_lst = list(map(len, lst))
             if newline:
-                print(indent + '# LEN: {}'.format(stats(map(len, lst))))
+                print(indent + '# LEN: {}'.format(stats(lens_lst, int_type=True)))
             print(prefix + '[')
             if not newline:
-                print(indent + COMMENT + 'LEN: {}'.format(stats(map(len, lst))))
+                print(indent + COMMENT + 'LEN: {}'.format(stats(lens_lst, int_type=True)))
             summarize_list_of_lists(lst, indent + INDENT)
             print(indent + '],')
         elif ht == 'int':
             print(prefix + ht + ',')
-            summarize_list_of_numbers(lst, indent)
+            summarize_list_of_numbers(lst, indent, of_type=int)
         elif ht == 'float':
             print(prefix + ht + ',')
-            summarize_list_of_numbers(lst, indent)
+            summarize_list_of_numbers(lst, indent, of_type=float)
         elif ht == 'str':
             print(prefix + ht + ',')
             summarize_list_of_strings(lst, indent)
@@ -153,9 +158,9 @@ def summarize_list_of_dicts(lst, indent):
         summarize_list(sublist, indent)
 
 
-def summarize_list_of_numbers(lst, indent):
+def summarize_list_of_numbers(lst, indent, of_type=None):
     # summary-stats
-    s = stats(lst)
+    s = stats(lst, int_type=(of_type is int))
 
     # singleton
     if isinstance(s, (int, float)):
@@ -175,24 +180,33 @@ def summarize_list_of_numbers(lst, indent):
 
 
 def summarize_list_of_strings(lst, indent):
-    hist = defaultdict(int)
-    for e in lst:
-        hist[e] += 1
+    # count occurrences
+    hist = Counter(lst).most_common()
 
-    # if only singletons, print first example (up to M chars)
+    # ASCII strings? (sample first three words to find out)
+    is_ascii = all(ord(letter) < 256 for word in lst[:3] for letter in word[::3])
+
+    # max m chars for strings
+    max_m = M_CHARS if is_ascii else M_CHARS // 2
+
+    # if only singletons, print first example (up to m chars)
     if len(hist) == len(lst):
-        m = M_CHARS if ord(lst[0][0]) < 128 else M_CHARS // 2
-        example = lst[0][:m] + ('...' if lst[0][m:] else '')
+        example = lst[0][:max_m] + ('...' if lst[0][max_m:] else '')
         print(indent + COMMENT + repr(example) + '{1}, ...', end='')
         print('[{} singleton(s)]'.format(len(hist)))
 
-    # print N most common occurrences
+    # print n common occurrences (up to total m chars)
     else:
-        n_cmn = ('{}{{{}}}'.format(repr(k), v) for (k, v), _ in zip(
-            sorted(hist.items(), key=itemgetter(1), reverse=True),
-            range(N_MOST_COMMON)))
-        more = ', ...' if len(hist) > N_MOST_COMMON else ' '
-        print(indent + COMMENT + ', '.join(n_cmn) + more, end='')
+        n_common = []
+        total_chars = 0
+        for occurrence, count in hist:
+            formatted = '{}{{{}}}'.format(repr(occurrence), count)
+            n_common.append(formatted)
+            total_chars += len(formatted)
+            if total_chars > max_m:
+                break
+        more = ', ...' if len(n_common) < len(hist) else ' '
+        print(indent + COMMENT + ', '.join(n_common) + more, end='')
         print('[{} uniq val(s)]'.format(len(hist)))
 
 
