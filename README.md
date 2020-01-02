@@ -8,20 +8,20 @@ json-summarizer
 Ported to run on Python>=3.5 (No longer runs on 2.X):
 
 ```sh
-python3 summarize_json.py <file.json>
+python3 summarize_json.py <FILE.json>
 ```
 
 Meant to be used like the following:
 
 ```sh
-python3 summarize_json.py <file.json> > summary.md
+python3 summarize_json.py <FILE.json> > summary.md
 # Enjoy Markdown's syntax & color highlighting
 ```
 
 Get simple summary without examples:
 
 ```sh
-python3 summarize_json.py <file.json> | grep -v '#' > simple.md
+python3 summarize_json.py <FILE.json> | grep -v '#' > simple.md
 # -v means --invert-match, i.e. see all non-comment lines only
 ```
 
@@ -38,7 +38,7 @@ done
 
 ## Sample input/output
 
-<details><summary>[INPUT] <i>colors.json</i></summary>
+<details><summary>[INPUT] <i>sample/colors.json</i></summary>
 <p>
 
 ```json
@@ -94,7 +94,7 @@ done
 </p>
 </details>
 
-<details><summary>[OUTPUT] <i>summary.md</i></summary>
+<details><summary>[OUTPUT] <i>sample/summary.md</i></summary>
 <p>
 
 ```py

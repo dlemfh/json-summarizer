@@ -1,0 +1,27 @@
+name: Diff test
+
+on:
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  test:
+    name: ${{ matrix.os }} & python ${{ matrix.py_version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+        py_version: [3.6, 3.7, 3.8]
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Use Python ${{ matrix.py_version }}
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.py_version }}
+
+    - name: Diff test
+      run: |
+        python summarize_json.py sample/colors.json > sample/test.md
+        diff sample/summary.md sample/test.md
