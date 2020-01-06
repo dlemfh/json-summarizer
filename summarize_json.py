@@ -243,13 +243,13 @@ def summarize_list_of_strings(lst, indent):
         else:
             n += 1
         if n > 0:
-            n_common = ', '.join(starmap(formatted, islice(hist, n)))
+            summary = ', '.join(starmap(formatted, islice(hist, n)))
         else:
             occurrence, count = hist[0]
-            n_common = formatted(occurrence, count, shorten_to=max_m)
-        print(indent + COMMENT + n_common, end='')
-        print(', ...' if n < len(hist) else ' ', end='')
-        print('[{} uniq, {} total]'.format(len(hist), len(lst)))
+            summary = formatted(occurrence, count, shorten_to=max_m)
+        if n < len(hist):
+            summary += ', ...[{} uniq, {} total]'.format(len(hist), len(lst))
+        print(indent + COMMENT + summary)
 
 
 def summarize_list_of_bools(lst, indent):
