@@ -23,13 +23,13 @@ COMMENT = '  # '
 DEPTH = 0
 
 
-# Trim a string
+# Trim string
 def trim(string, to):
     string = str(string)
     return string[:to] + (string[to:] and '...')
 
 
-# Lessen a list
+# Lessen list
 def lessen(lst, to, using=lambda x: x):
     n, m = 0, 0
     for n, element in enumerate(lst):
@@ -41,7 +41,7 @@ def lessen(lst, to, using=lambda x: x):
     return islice(lst, n), n
 
 
-# Define how to stringify a list
+# Stringify list
 def stringify(lst, to):
     string = '['
     if lst:
@@ -59,9 +59,17 @@ def stringify(lst, to):
     return string
 
 
-# Define how to format entry & count
+# Return formatted string
 def formatted(entry, count):
     return '{}{{{}}}'.format(entry, count)
+
+
+# Custom printing function
+def pprint(string, indent=0, comment=False, **kwargs):
+    prefix = indent * INDENT
+    if comment:
+        prefix += COMMENT
+    print(prefix + string, **kwargs)
 
 
 # Define how to summarize list of numbers
@@ -130,26 +138,26 @@ def get_homogeneous_type(type_dict) -> Tuple[Optional[str], bool]:
 def summarize_dict(d, indent):
     for k, v in d.items():
         # print key
-        print(indent + repr(k) + ':', end=' ')
+        pprint('{}:'.format(repr(k)), end=' ')
 
         # print value
         if isinstance(v, dict):
-            print('{')
-            summarize_dict(v, indent + INDENT)
-            print(indent + '},')
+            pprint('{')
+            summarize_dict(v, indent + 1)
+            pprint('},', indent=indent)
         elif isinstance(v, list) and v:
-            print('[')
-            print(indent + COMMENT + 'LEN: {}'.format(len(v)))
-            summarize_list(v, indent + INDENT, newline=True)
-            print(indent + '],')
+            pprint('[')
+            pprint('LEN: {}'.format(len(v)), indent=indent, comment=True)
+            summarize_list(v, indent + 1, newline=True)
+            pprint('],', indent=indent)
         else:
-            print(repr(v) + ',')
+            pprint('{},'.format(repr(v)))
 
 
 def summarize_list(lst, indent, newline=False):
     type_dict = analyze_types(lst)
     ht, optional = get_homogeneous_type(type_dict)
-    prefix = indent if newline else ''
+    # optional = 'None' in type_dict
 
     # Empty list
     if not lst:
@@ -158,45 +166,44 @@ def summarize_list(lst, indent, newline=False):
     # Homogeneous list
     elif ht and not optional:
         if ht == 'dict':
-            print(prefix + '{')
-            summarize_list_of_dicts(lst, indent + INDENT)
-            print(indent + '},')
+            pprint('{', indent=(indent if newline else 0))
+            summarize_list_of_dicts(lst, indent + 1)
+            pprint('},', indent=indent)
         elif ht == 'list':
             # TODO: group into separate function
-            # TODO: put print(prefix + ht) inside corresponding functions
             if DEPTH:
                 if newline:
-                    print(indent + '# LEN: {}'.format(stats(map(len, lst), int_type=True)))
-                print(prefix + '[')
+                    pprint('# LEN: {}'.format(stats(map(len, lst), int_type=True)), indent=indent)
+                pprint('[', indent=(indent if newline else 0))
                 if not newline:
-                    print(indent + COMMENT + 'LEN: {}'.format(stats(map(len, lst), int_type=True)))
-                flatten_list_of_lists(lst, indent + INDENT)
-                print(indent + '],')
+                    pprint('LEN: {}'.format(stats(map(len, lst), int_type=True)), indent=indent, comment=True)
+                flatten_list_of_lists(lst, indent + 1)
+                pprint('],', indent=indent)
             else:
                 types = set(chain.from_iterable(map(analyze_types, lst)))
                 if len(types) == 0:
-                    print(prefix + 'List,')
+                    pprint('List,', indent=(indent if newline else 0))
                 elif len(types) == 1:
-                    print(prefix + 'List[{}],'.format(next(iter(types))))
+                    pprint('List[{}],'.format(next(iter(types))), indent=(indent if newline else 0))
                 else:
-                    print(prefix + 'List[Union[{}]],'.format(', '.join(types)))
-                print(indent + COMMENT + 'LEN: {}'.format(stats(map(len, lst), int_type=True)))
+                    pprint('List[Union[{}]],'.format(', '.join(types)), indent=(indent if newline else 0))
+                pprint('LEN: {}'.format(stats(map(len, lst), int_type=True)), indent=indent, comment=True)
                 summarize_list_of_lists(lst, indent)
         elif ht == 'str':
-            print(prefix + ht + ',')
+            pprint('{},'.format(ht), indent=(indent if newline else 0))
             summarize_list_of_strings(lst, indent)
         elif ht == 'int':
-            print(prefix + ht + ',')
+            pprint('{},'.format(ht), indent=(indent if newline else 0))
             summarize_list_of_numbers(lst, indent, of_type=int)
         elif ht == 'float':
-            print(prefix + ht + ',')
+            pprint('{},'.format(ht), indent=(indent if newline else 0))
             summarize_list_of_numbers(lst, indent, of_type=float)
         elif ht == 'bool':
-            print(prefix + ht + ',')
+            pprint('{},'.format(ht), indent=(indent if newline else 0))
             summarize_list_of_bools(lst, indent)
         else:
             assert ht == 'None'
-            print(prefix + ht + ',')
+            pprint('{},'.format(ht), indent=(indent if newline else 0))
             summarize_list_of_nulls(lst, indent)
 
     # # Optionally homogeneous list of lists
@@ -215,7 +222,7 @@ def summarize_list(lst, indent, newline=False):
     # Optionally homogeneous list
     elif ht and optional and ht in {'str', 'int', 'float', 'bool'}:
         lst = (e for e in lst if e is not None)
-        print(prefix + 'Optional[{}]'.format(ht) + ',')
+        pprint('Optional[{}],'.format(ht), indent=(indent if newline else 0))
         if ht == 'str':
             summarize_list_of_strings(lst, indent)
         elif ht == 'int':
@@ -224,14 +231,15 @@ def summarize_list(lst, indent, newline=False):
             summarize_list_of_numbers(lst, indent, of_type=float)
         elif ht == 'bool':
             summarize_list_of_bools(lst, indent)
-        print(indent + COMMENT + 'None: {}'.format(type_dict['None']))
+        pprint('None: {}'.format(type_dict['None']), indent=indent, comment=True)
         # TODO: heterogeneous list -> {types} + multiple-line summary
         # TODO: optional list -> Optional[List[type]]
 
     # Heterogeneous list
     else:
-        print(prefix + '<heterogeneous-type: ' + ', '.join(
-            '{} {}(s)'.format(c, t) for t, c in type_dict.items()) + '>,')
+        pprint('<heterogeneous-type: {}>,'.format(
+            ', '.join('{} {}(s)'.format(c, t) for t, c in type_dict.items())
+        ), indent=(indent if newline else 0))
 
 
 def summarize_list_of_dicts(lst, indent):
@@ -239,45 +247,45 @@ def summarize_list_of_dicts(lst, indent):
     total = len(list(lst))
 
     for f, c in field_counts.items():
-        print(indent + repr(f), end='')
+        pprint(repr(f), indent=indent, end='')
         if c < total:
             sublist = [d[f] for d in lst if f in d]
-            print(' ({} of {} records):'.format(c, total), end=' ')
+            pprint(' ({} of {} records):'.format(c, total), end=' ')
         else:
             sublist = [d[f] for d in lst]
-            print(':', end=' ')
+            pprint(':', end=' ')
 
         summarize_list(sublist, indent)
 
 
 def summarize_list_of_nulls(lst, indent):
-    print(indent + COMMENT + 'None: {}'.format(len(lst)))
+    pprint('None: {}'.format(len(lst)), indent=indent, comment=True)
 
 
 def summarize_list_of_bools(lst, indent):
     count = Counter(lst)
-    print(indent + COMMENT + 'True: {}, False: {}'.format(count[True], count[False]))
+    pprint('True: {}, False: {}'.format(count[True], count[False]), indent=indent, comment=True)
 
 
 def summarize_list_of_numbers(lst, indent, of_type=None):
     # summary-stats
-    s = stats(lst, int_type=(of_type is int))
+    summary = stats(lst, int_type=(of_type is int))
 
     # singleton
-    if isinstance(s, (int, float)):
-        print(indent + COMMENT + str(s))
-        return
+    if isinstance(summary, (int, float)):
+        pprint(str(summary), indent=indent, comment=True)
 
     # else
-    print(indent + COMMENT + s, end='')
-
-    # check if sorted
-    if all(i <= j for i, j in zip(lst, islice(lst, 1, None))):
-        print(' *ASC*')
-    elif all(i >= j for i, j in zip(islice(lst, 1, None), lst)):
-        print(' *DESC*')
     else:
-        print()
+        pprint(summary, indent=indent, comment=True, end='')
+
+        # check if sorted
+        if all(i <= j for i, j in zip(lst, islice(lst, 1, None))):
+            pprint(' *ASC*')
+        elif all(i >= j for i, j in zip(lst, islice(lst, 1, None))):
+            pprint(' *DESC*')
+        else:
+            pprint('')
 
 
 def summarize_list_of_strings(lst, indent):
@@ -295,14 +303,14 @@ def summarize_list_of_strings(lst, indent):
     if len(hist) == 1:
         occurrence, count = hist[0]
         summary = formatted(repr(trim(occurrence, to=max_m)), count)
-        print(indent + COMMENT + summary)
+        pprint(summary, indent=indent, comment=True)
 
     # if only singletons, print first example (up to m chars)
     elif len(hist) == len(lst):
         example = lst[0]
         summary = formatted(repr(trim(example, to=max_m)), 1)
-        print(indent + COMMENT + summary, end='')
-        print(', ...[{} singletons]'.format(len(hist)))
+        pprint(summary, indent=indent, comment=True, end='')
+        pprint(', ...[{} singletons]'.format(len(hist)))
 
     # print n most common occurrences (up to total m chars)
     else:
@@ -316,7 +324,7 @@ def summarize_list_of_strings(lst, indent):
             summary = formatted(repr(trim(occurrence, to=max_m)), count)
         if n < len(hist):
             summary += ', ...[{} uniq, {} total]'.format(len(hist), len(lst))
-        print(indent + COMMENT + summary)
+        pprint(summary, indent=indent, comment=True)
 
 
 def summarize_list_of_lists(lst, indent):
@@ -337,14 +345,14 @@ def summarize_list_of_lists(lst, indent):
     if len(hist) == 1:
         sublist, count = hist[0]
         summary = formatted(stringify(sublist, to=max_m), count)
-        print(indent + COMMENT + summary)
+        pprint(summary, indent=indent, comment=True)
 
     # if only singletons, print first example (up to m chars)
     elif len(hist) == len(lst):
         sublist = lst[0]
         summary = formatted(stringify(sublist, to=max_m), 1)
-        print(indent + COMMENT + summary, end='')
-        print(', ...[{} singletons]'.format(len(hist)))
+        pprint(summary, indent=indent, comment=True, end='')
+        pprint(', ...[{} singletons]'.format(len(hist)))
 
     # print n most common occurrences (up to total m chars)
     else:
@@ -358,7 +366,7 @@ def summarize_list_of_lists(lst, indent):
             summary = formatted(stringify(sublist, to=max_m), count)
         if n < len(hist):
             summary += ', ...[{} uniq, {} total]'.format(len(hist), len(lst))
-        print(indent + COMMENT + summary)
+        pprint(summary, indent=indent, comment=True)
 
 
 def flatten_list_of_lists(lst, indent):
@@ -374,7 +382,7 @@ def flatten_list_of_lists(lst, indent):
             hts.add(ht)
 
     if not hts:
-        print(indent + '[heterogeneous sub-lists]')
+        pprint('[heterogeneous sub-lists]', indent=indent)
     elif len(hts) == 1:
         # homogeneous_type = list(hts)[0]
         # flatten the list and recurse, tricky tricky!
@@ -382,9 +390,9 @@ def flatten_list_of_lists(lst, indent):
         if flattened_lst:
             summarize_list(flattened_lst, indent, newline=True)
         else:
-            print(indent + 'empty lists')
+            pprint('empty lists', indent=indent)
     else:
-        print(indent + ', '.join(sorted(hts)) + ' (heterogeneous)')
+        pprint('{} (heterogeneous)'.format(', '.join(sorted(hts))), indent=indent)
 
 
 if __name__ == "__main__":
@@ -402,16 +410,16 @@ if __name__ == "__main__":
         o = json.load(file, object_pairs_hook=OrderedDict)
 
     # Summarize recursively
-    print('```py')
+    pprint('```py')
     if isinstance(o, dict):
-        print('{')
-        summarize_dict(o, INDENT)
-        print('}')
+        pprint('{')
+        summarize_dict(o, 1)
+        pprint('}')
     elif isinstance(o, list) and o:
-        print('# COUNT: {}'.format(len(o)))
-        print('[')
-        summarize_list(o, INDENT, newline=True)
-        print(']')
+        pprint('# COUNT: {}'.format(len(o)))
+        pprint('[')
+        summarize_list(o, 1, newline=True)
+        pprint(']')
     else:
-        print(repr(o))
-    print('```')
+        pprint(repr(o))
+    pprint('```')
