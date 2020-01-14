@@ -138,7 +138,7 @@ def get_homogeneous_type(type_dict) -> Tuple[Optional[str], bool]:
 def summarize_dict(d, indent):
     for k, v in d.items():
         # print key
-        pprint('{}:'.format(repr(k)), end=' ')
+        pprint('{}:'.format(repr(k)), indent=indent, end=' ')
 
         # print value
         if isinstance(v, dict):
@@ -238,8 +238,8 @@ def summarize_list(lst, indent, newline=False):
     # Heterogeneous list
     else:
         pprint('<heterogeneous-type: {}>,'.format(
-            ', '.join('{} {}(s)'.format(c, t) for t, c in type_dict.items())
-        ), indent=(indent if newline else 0))
+                   ', '.join('{} {}(s)'.format(c, t) for t, c in type_dict.items())
+               ), indent=(indent if newline else 0))
 
 
 def summarize_list_of_dicts(lst, indent):
