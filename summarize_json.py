@@ -172,7 +172,7 @@ def summarize_list(lst, indent, newline=False):
         elif ht == 'list':
             # TODO: group into separate function
             types = set(chain.from_iterable(map(analyze_types, lst)))
-            if types == {'dict'}:
+            if types == {'dict'} or types == {'list'}:
                 if newline:
                     pprint('# COUNT: {}'.format(stats(map(len, lst), int_type=True)), indent=indent)
                 pprint('[', indent=(indent if newline else 0))
