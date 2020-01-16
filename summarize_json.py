@@ -88,7 +88,7 @@ def stats(lst, int_type=False, round_to=2, show_count=5, show_all=10):
             lst_mean = '{}.x'.format(floor(lst_mean))
         else:
             lst_mean = round(lst_mean, round_to)
-        return '[min: {}, max: {}, mode: {}, mean: {}, uniq: {}, total: {}]'.format(
+        return '(min: {}, max: {}, mode: {}, mean: {}, uniq: {}, total: {})'.format(
             min(lst), max(lst), cnt[0][0], lst_mean, len(cnt), len(lst))
 
 
@@ -147,7 +147,7 @@ def summarize_dict(d, indent):
             pprint('},', indent=indent)
         elif isinstance(v, list) and v:
             pprint('[')
-            pprint('LEN: {}'.format(len(v)), indent=indent, comment=True)
+            pprint('COUNT: {}'.format(len(v)), indent=indent, comment=True)
             summarize_list(v, indent + 1, newline=True)
             pprint('],', indent=indent)
         else:
@@ -171,12 +171,13 @@ def summarize_list(lst, indent, newline=False):
             pprint('},', indent=indent)
         elif ht == 'list':
             # TODO: group into separate function
-            if DEPTH:
+            types = set(chain.from_iterable(map(analyze_types, lst)))
+            if types == {'dict'}:
                 if newline:
-                    pprint('# LEN: {}'.format(stats(map(len, lst), int_type=True)), indent=indent)
+                    pprint('# COUNT: {}'.format(stats(map(len, lst), int_type=True)), indent=indent)
                 pprint('[', indent=(indent if newline else 0))
                 if not newline:
-                    pprint('LEN: {}'.format(stats(map(len, lst), int_type=True)), indent=indent, comment=True)
+                    pprint('COUNT: {}'.format(stats(map(len, lst), int_type=True)), indent=indent, comment=True)
                 flatten_list_of_lists(lst, indent + 1)
                 pprint('],', indent=indent)
             else:
@@ -310,7 +311,7 @@ def summarize_list_of_strings(lst, indent):
         example = lst[0]
         summary = formatted(repr(trim(example, to=max_m)), 1)
         pprint(summary, indent=indent, comment=True, end='')
-        pprint(', ...[{} singletons]'.format(len(hist)))
+        pprint(', ...({} singletons)'.format(len(hist)))
 
     # print n most common occurrences (up to total m chars)
     else:
@@ -323,7 +324,7 @@ def summarize_list_of_strings(lst, indent):
             occurrence, count = hist[0]
             summary = formatted(repr(trim(occurrence, to=max_m)), count)
         if n < len(hist):
-            summary += ', ...[{} uniq, {} total]'.format(len(hist), len(lst))
+            summary += ', ...({} uniq, {} total)'.format(len(hist), len(lst))
         pprint(summary, indent=indent, comment=True)
 
 
@@ -352,7 +353,7 @@ def summarize_list_of_lists(lst, indent):
         sublist = lst[0]
         summary = formatted(stringify(sublist, to=max_m), 1)
         pprint(summary, indent=indent, comment=True, end='')
-        pprint(', ...[{} singletons]'.format(len(hist)))
+        pprint(', ...({} singletons)'.format(len(hist)))
 
     # print n most common occurrences (up to total m chars)
     else:
@@ -365,7 +366,7 @@ def summarize_list_of_lists(lst, indent):
             sublist, count = hist[0]
             summary = formatted(stringify(sublist, to=max_m), count)
         if n < len(hist):
-            summary += ', ...[{} uniq, {} total]'.format(len(hist), len(lst))
+            summary += ', ...({} uniq, {} total)'.format(len(hist), len(lst))
         pprint(summary, indent=indent, comment=True)
 
 
@@ -382,7 +383,7 @@ def flatten_list_of_lists(lst, indent):
             hts.add(ht)
 
     if not hts:
-        pprint('[heterogeneous sub-lists]', indent=indent)
+        pprint('(heterogeneous sub-lists)', indent=indent)
     elif len(hts) == 1:
         # homogeneous_type = list(hts)[0]
         # flatten the list and recurse, tricky tricky!
