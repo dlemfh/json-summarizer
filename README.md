@@ -25,7 +25,7 @@ python3 summarize_json.py <FILE.json> | grep -v '#' > simple.md
 # -v means --invert-match, i.e. see all non-comment lines only
 ```
 
-Or use a script like following, to summarize all json files in directory:
+Or use a script like so, to summarize all json files in directory:
 
 ```sh
 for f in *.json; do                 # For all json files:
